@@ -1,10 +1,11 @@
 import 'dart:async';
 import 'dart:developer';
-import 'dart:convert'; // สำหรับ jsonDecode
-import 'dart:typed_data'; // สำหรับ Uint8List
+import 'dart:convert';
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:camera/camera.dart';
 import 'package:http/http.dart' as http; // สำหรับส่ง API
+import 'package:trffic_ilght_app/core/config/config.dart';
 import 'camera_controls.dart';
 
 class CameraRealTime extends StatefulWidget {
@@ -23,10 +24,94 @@ class _CameraRealTimeState extends State<CameraRealTime> {
   List<dynamic> _detections = [];
   Size _serverImageSize = Size.zero; // ขนาดรูปต้นฉบับที่ส่งไป Server
 
+  String url = '';
+
+  // เรียกใช้เมื่อ เปิดเข้าใช้ หน้านี้
   @override
   void initState() {
     super.initState();
     initCamera();
+
+    Configuration.getConfig().then((config) {
+      url = config["apiEndpoint"];
+    });
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel(); // ยกเลิก Timer
+    _cameraController?.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_cameraController == null || !_cameraController!.value.isInitialized) {
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
+    }
+
+    return Scaffold(
+      body: Stack(
+        children: [
+          // 1. ตัวกล้อง (Layout เดิม)
+          Center(child: CameraPreview(_cameraController!)),
+
+          // 2. ตัววาดกรอบ (ซ้อนทับอยู่ตำแหน่งเดียวกับกล้อง)
+          if (_detections.isNotEmpty && _serverImageSize != Size.zero)
+            Positioned.fill(
+              child: LayoutBuilder(
+                builder: (context, constraints) {
+                  // ส่งขนาดหน้าจอจริงไปให้ Painter คำนวณ Scale
+                  return CustomPaint(
+                    painter: BoundingBoxPainter(
+                      detections: _detections,
+                      serverSize:
+                          _serverImageSize, // ขนาดรูปต้นทาง (จาก Server)
+                      previewSize:
+                          _cameraController!.value.previewSize!, // ขนาด Preview
+                      widgetSize:
+                          constraints.biggest, // ขนาดหน้าจอที่แสดงผลอยู่
+                    ),
+                  );
+                },
+              ),
+            ),
+
+          Positioned(
+            bottom: 40,
+            left: 20,
+            right: 20,
+            child: Container(
+              padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
+              decoration: BoxDecoration(
+                color: Colors.black45,
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Text(
+                _detections.isNotEmpty
+                    ? "เจอ: ${_detections[0]['name']} (${(_detections[0]['confidence'] * 100).toInt()}%)"
+                    : "ไฟเขียวไห้เลี้ยวซ้าย",
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  color: Colors.green,
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+          ),
+
+          CameraControls(
+            cameraController: _cameraController!,
+            onClose: () async {
+              _timer?.cancel();
+              _cameraController?.dispose();
+              Navigator.pop(context);
+            },
+          ),
+        ],
+      ),
+    );
   }
 
   Future<void> initCamera() async {
@@ -69,7 +154,7 @@ class _CameraRealTimeState extends State<CameraRealTime> {
       // 1. ถ่ายรูป (ได้ JPEG ทันที)
       final XFile imageFile = await _cameraController!.takePicture();
       final bytes = await imageFile.readAsBytes();
-
+      log(imageFile.toString());
       // 2. ส่งไป FastAPI
       await _sendToYolo(bytes);
     } catch (e) {
@@ -84,11 +169,10 @@ class _CameraRealTimeState extends State<CameraRealTime> {
     try {
       var request = http.MultipartRequest(
         'POST',
-        // ⚠️ เปลี่ยน IP ตรงนี้ให้เป็น IP เครื่องคอมฯ ของคุณ (ดูด้วย ipconfig)
-        // ค้นหาบรรทัดนี้ในฟังก์ชัน sendFrameToYolo
-        Uri.parse('http://10.31.7.135:8000/img_object_detection_to_json'),
-      );
 
+        Uri.parse('$url/img_object_detection_to_json'),
+      );
+      print("URL: > " + url);
       request.files.add(
         http.MultipartFile.fromBytes('file', imageBytes, filename: 'frame.jpg'),
       );
@@ -116,93 +200,8 @@ class _CameraRealTimeState extends State<CameraRealTime> {
       log("API Error: $e");
     }
   }
-
-  @override
-  void dispose() {
-    _timer?.cancel(); // ยกเลิก Timer
-    _cameraController?.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    if (_cameraController == null || !_cameraController!.value.isInitialized) {
-      return const Scaffold(body: Center(child: CircularProgressIndicator()));
-    }
-
-    // ใช้ LayoutBuilder เพื่อหาขนาดพื้นที่จริงที่กล้องแสดงผลอยู่
-    return Scaffold(
-      body: Stack(
-        children: [
-          // 1. ตัวกล้อง (Layout เดิม)
-          Center(child: CameraPreview(_cameraController!)),
-
-          // 2. ตัววาดกรอบ (ซ้อนทับอยู่ตำแหน่งเดียวกับกล้อง)
-          if (_detections.isNotEmpty && _serverImageSize != Size.zero)
-            Positioned.fill(
-              child: LayoutBuilder(
-                builder: (context, constraints) {
-                  // ส่งขนาดหน้าจอจริงไปให้ Painter คำนวณ Scale
-                  return CustomPaint(
-                    painter: BoundingBoxPainter(
-                      detections: _detections,
-                      serverSize:
-                          _serverImageSize, // ขนาดรูปต้นทาง (จาก Server)
-                      previewSize:
-                          _cameraController!.value.previewSize!, // ขนาด Preview
-                      widgetSize:
-                          constraints.biggest, // ขนาดหน้าจอที่แสดงผลอยู่
-                    ),
-                  );
-                },
-              ),
-            ),
-
-          // 3. UI เดิมของคุณ
-          Positioned(
-            bottom: 40,
-            left: 20,
-            right: 20,
-            child: Container(
-              padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
-              decoration: BoxDecoration(
-                color: Colors.black45,
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Text(
-                // เปลี่ยนข้อความตามสิ่งที่เจอ
-                _detections.isNotEmpty
-                    ? "เจอ: ${_detections[0]['name']} (${(_detections[0]['confidence'] * 100).toInt()}%)"
-                    : "ไฟเขียวไห้เลี้ยวซ้าย",
-                textAlign: TextAlign.center,
-                style: const TextStyle(
-                  color: Colors.green,
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            ),
-          ),
-
-          // ปุ่มควบคุม
-          CameraControls(
-            cameraController: _cameraController!,
-            onClose: () async {
-              _timer?.cancel();
-              // ไม่ต้อง stopImageStream แล้วเพราะเราไม่ได้ใช้
-              _cameraController?.dispose();
-              Navigator.pop(context);
-            },
-          ),
-        ],
-      ),
-    );
-  }
 }
 
-// ==========================================
-// ส่วน Painter (วาดกรอบสี่เหลี่ยม)
-// ==========================================
 class BoundingBoxPainter extends CustomPainter {
   final List<dynamic> detections;
   final Size serverSize; // ขนาดรูปที่ส่งไป Server (เช่น 1280x720)

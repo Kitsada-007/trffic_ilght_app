@@ -197,8 +197,8 @@ class _RegisterState extends State<RegisterPage> {
                       width: double.infinity,
                       child: OutlinedButton.icon(
                         onPressed: () {},
-                        icon: Image.network(
-                          'https://image.similarpng.com/file/similarpng/very-thumbnail/2020/06/Logo-google-icon-PNG.png',
+                        icon: Image.asset(
+                          'assets/images/Logogoogleicon.png',
                           width: 24,
                           height: 24,
                         ),
