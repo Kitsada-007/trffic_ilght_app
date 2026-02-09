@@ -169,16 +169,12 @@ class _CameraRealTimeState extends State<CameraRealTime> {
     try {
       var request = http.MultipartRequest(
         'POST',
-<<<<<<< HEAD
+
         // ⚠️ เปลี่ยน IP ตรงนี้ให้เป็น IP เครื่องคอมฯ ของคุณ (ดูด้วย ipconfig)
         // ค้นหาบรรทัดนี้ในฟังก์ชัน sendFrameToYolo
-        Uri.parse('http://192.168.1.7:8000/img_object_detection_to_json'),
-      );
-=======
->>>>>>> 8be23b34f0f5a3d9959c8b74d486848fe3fd4857
-
         Uri.parse('$url/img_object_detection_to_json'),
       );
+
       print("URL: > " + url);
       request.files.add(
         http.MultipartFile.fromBytes('file', imageBytes, filename: 'frame.jpg'),
