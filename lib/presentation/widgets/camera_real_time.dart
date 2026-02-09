@@ -86,7 +86,7 @@ class _CameraRealTimeState extends State<CameraRealTime> {
         'POST',
         // ⚠️ เปลี่ยน IP ตรงนี้ให้เป็น IP เครื่องคอมฯ ของคุณ (ดูด้วย ipconfig)
         // ค้นหาบรรทัดนี้ในฟังก์ชัน sendFrameToYolo
-        Uri.parse('http://10.31.7.135:8000/img_object_detection_to_json'),
+        Uri.parse('http://192.168.1.7:8000/img_object_detection_to_json'),
       );
 
       request.files.add(
