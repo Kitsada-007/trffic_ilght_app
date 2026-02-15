@@ -42,7 +42,7 @@ class _SingleImageScreenState extends State<SingleImageScreen> {
 
   /// Initializes the YOLO model for inference
   Future<void> _initializeYOLO() async {
-    _modelPath = await _modelManager.getModelPath(ModelType.bestFloat16traffic);
+    _modelPath = await _modelManager.getModelPath(ModelType.bestFloat16);
     if (_modelPath == null) return;
     _yolo = YOLO(modelPath: _modelPath!, task: YOLOTask.segment);
     try {

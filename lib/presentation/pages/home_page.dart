@@ -3,6 +3,8 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:trffic_ilght_app/presentation/pages/camera_inference_screen.dart';
+import 'package:trffic_ilght_app/presentation/pages/single_image_screen.dart';
+import 'package:trffic_ilght_app/presentation/pages/video_inference_screen.dart';
 import 'package:video_player/video_player.dart';
 
 import 'package:trffic_ilght_app/presentation/widgets/bottom_navigation_bar.dart';
@@ -18,6 +20,11 @@ class _CameraPageState extends State<CameraPage> {
   final ImagePicker picker = ImagePicker();
   XFile? videoFile;
   VideoPlayerController? videoController;
+
+  void _showSnackBar(String msg) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
+  }
 
   @override
   void dispose() {
@@ -94,6 +101,33 @@ class _CameraPageState extends State<CameraPage> {
                   ),
                 ),
               ),
+              const SizedBox(height: 16),
+              SizedBox(
+                width: double.infinity,
+                height: 55,
+                child: ElevatedButton.icon(
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const SingleImageScreen(),
+                      ),
+                    );
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color.fromARGB(255, 3, 203, 253),
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                  ),
+                  icon: const Icon(Icons.file_upload),
+                  label: const Text(
+                    'อัปโหลดรูปภาพ',
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                  ),
+                ),
+              ),
             ],
           ),
         ),
@@ -106,13 +140,36 @@ class _CameraPageState extends State<CameraPage> {
       source: ImageSource.gallery,
     );
     if (pickedVideo != null) {
+      final ext = pickedVideo.path.split('.').last.toLowerCase();
+      if (ext != 'mp4') {
+        _showSnackBar('กรุณาเลือกไฟล์วิดีโอ .mp4 เท่านั้น');
+        log('Invalid video type selected: ${pickedVideo.path}');
+        return;
+      }
+
+      await videoController?.dispose();
       videoFile = pickedVideo;
       videoController = VideoPlayerController.file(File(videoFile!.path))
-        ..initialize().then((_) {
-          setState(() {});
-          videoController!.play();
-        });
+        ..initialize()
+            .then((_) {
+              if (!mounted) return;
+              setState(() {});
+              videoController!.play();
+            })
+            .catchError((e) {
+              _showSnackBar('ไม่สามารถเปิดวิดีโอได้');
+              log('VideoPlayer initialize error: $e');
+            });
       log("Picked video: ${videoFile!.path}");
+
+      if (!mounted) return;
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) =>
+              VideoInferenceScreen(videoPath: videoFile!.path),
+        ),
+      );
     } else {
       log("No video selected");
     }

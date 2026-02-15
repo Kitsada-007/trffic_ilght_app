@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:trffic_ilght_app/presentation/pages/camara_page.dart';
+import 'package:trffic_ilght_app/presentation/pages/home_page.dart';
 import 'package:trffic_ilght_app/presentation/pages/register_page.dart';
 
 class LoginPage extends StatefulWidget {
