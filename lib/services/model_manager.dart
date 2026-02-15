@@ -128,6 +128,16 @@ class ModelManager {
     final modelFile = File('${dir.path}/$bundledName');
     if (await modelFile.exists()) return modelFile.path;
 
+    // Check if model exists in assets and copy to local storage
+    try {
+      final assetData = await rootBundle.load(modelType.modelName);
+      await modelFile.parent.create(recursive: true);
+      await modelFile.writeAsBytes(assetData.buffer.asUint8List());
+      return modelFile.path;
+    } catch (e) {
+      print('Failed to load model from assets: $e');
+    }
+
     // Download if not found (only for standard Ultralytics models)
     if (!modelType.modelName.contains('best_float32') &&
         !modelType.modelName.contains('weights/')) {

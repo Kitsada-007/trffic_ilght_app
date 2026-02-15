@@ -24,7 +24,7 @@ class CameraInferenceController extends ChangeNotifier {
   SliderType _activeSlider = SliderType.none;
 
   // Model state
-  ModelType _selectedModel = ModelType.detect;
+  ModelType _selectedModel = ModelType.bestFloat16traffic;
   bool _isModelLoading = false;
   String? _modelPath;
   String _loadingMessage = '';

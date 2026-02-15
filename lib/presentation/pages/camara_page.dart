@@ -2,9 +2,9 @@ import 'dart:developer';
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:trffic_ilght_app/presentation/pages/camera_inference_screen.dart';
 import 'package:video_player/video_player.dart';
 
-import 'package:trffic_ilght_app/presentation/widgets/camera_real_time.dart';
 import 'package:trffic_ilght_app/presentation/widgets/bottom_navigation_bar.dart';
 
 class CameraPage extends StatefulWidget {
@@ -54,7 +54,7 @@ class _CameraPageState extends State<CameraPage> {
                     Navigator.push(
                       context,
                       MaterialPageRoute(
-                        builder: (context) => const CameraRealTime(),
+                        builder: (context) => const CameraInferenceScreen(),
                       ),
                     );
                   },
